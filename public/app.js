@@ -1,1 +1,339 @@
+// app.js — 前端互動邏輯（純 JavaScript，不需要任何框架）
 
+// ---------- Tab 切換 ----------
+document.querySelectorAll('.tab-btn').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach((b) => b.classList.remove('active'));
+    document.querySelectorAll('.view').forEach((v) => v.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(btn.dataset.view).classList.add('active');
+  });
+});
+
+// ---------- 共用工具 ----------
+async function api(path, options = {}) {
+  const res = await fetch(path, {
+    ...options,
+    headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.error || `發生錯誤 (${res.status})`);
+  }
+  return data;
+}
+
+function showStatus(el, type, text) {
+  el.innerHTML = `<div class="status-box status-${type}">${text}</div>`;
+}
+
+function clearStatus(el) {
+  el.innerHTML = '';
+}
+
+// ---------- 客戶管理 ----------
+let customers = [];
+
+async function loadCustomers() {
+  customers = await api('/api/customers');
+  renderCustomerList();
+}
+
+function customerStatusBadge(c) {
+  if (typeof c.lat !== 'number' || typeof c.lng !== 'number') {
+    return '<span class="badge badge-no">無座標</span>';
+  }
+  if (!c.lineUserId) {
+    return '<span class="badge badge-warn">未綁定</span>';
+  }
+  return '<span class="badge badge-ok">可通知</span>';
+}
+
+function renderCustomerList() {
+  const wrap = document.getElementById('customer-list');
+  document.getElementById('customer-count').textContent = customers.length;
+
+  if (customers.length === 0) {
+    wrap.innerHTML = '<div class="empty-state">尚未新增客戶</div>';
+    return;
+  }
+
+  wrap.innerHTML = customers
+    .map(
+      (c) => `
+    <div class="customer-row" data-id="${c.id}">
+      <div class="customer-main">
+        <div class="customer-name">${escapeHtml(c.name || '（未填姓名）')} ${customerStatusBadge(c)}</div>
+        <div class="customer-meta">${escapeHtml(c.phone || '無電話')} · ${escapeHtml(c.address || '')}</div>
+      </div>
+      <div class="customer-actions">
+        ${
+          typeof c.lat !== 'number'
+            ? `<button class="btn btn-outline btn-sm" data-action="regeo" data-id="${c.id}">重新定位</button>`
+            : ''
+        }
+        <button class="btn-danger-text" data-action="delete" data-id="${c.id}">刪除</button>
+      </div>
+    </div>
+  `
+    )
+    .join('');
+
+  wrap.querySelectorAll('[data-action="delete"]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('確定要刪除這位客戶嗎？')) return;
+      await api(`/api/customers/${btn.dataset.id}`, { method: 'DELETE' });
+      await loadCustomers();
+    });
+  });
+
+  wrap.querySelectorAll('[data-action="regeo"]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      btn.textContent = '定位中…';
+      btn.disabled = true;
+      try {
+        await api(`/api/customers/${btn.dataset.id}/regeocode`, { method: 'POST' });
+        await loadCustomers();
+      } catch (e) {
+        alert('定位失敗：' + e.message);
+        btn.textContent = '重新定位';
+        btn.disabled = false;
+      }
+    });
+  });
+}
+
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"']/g, (m) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  }[m]));
+}
+
+document.getElementById('btn-add-customer').addEventListener('click', async () => {
+  const name = document.getElementById('c-name').value.trim();
+  const phone = document.getElementById('c-phone').value.trim();
+  const address = document.getElementById('c-address').value.trim();
+  const statusEl = document.getElementById('add-customer-status');
+
+  if (!address) {
+    showStatus(statusEl, 'error', '請填寫地址');
+    return;
+  }
+
+  const btn = document.getElementById('btn-add-customer');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> 新增中…';
+  clearStatus(statusEl);
+
+  try {
+    const result = await api('/api/customers', { method: 'POST', body: JSON.stringify({ name, phone, address }) });
+    document.getElementById('c-name').value = '';
+    document.getElementById('c-phone').value = '';
+    document.getElementById('c-address').value = '';
+    showStatus(
+      statusEl,
+      result.geocoded ? 'success' : 'error',
+      result.geocoded ? '已新增，地址定位成功 ✅' : '已新增，但地址定位失敗，請到名單裡按「重新定位」再試一次'
+    );
+    await loadCustomers();
+  } catch (e) {
+    showStatus(statusEl, 'error', '新增失敗：' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '新增客戶';
+  }
+});
+
+document.getElementById('btn-bulk-import').addEventListener('click', async () => {
+  const text = document.getElementById('bulk-text').value.trim();
+  const statusEl = document.getElementById('bulk-status');
+  if (!text) {
+    showStatus(statusEl, 'error', '請先貼上名單');
+    return;
+  }
+  const btn = document.getElementById('btn-bulk-import');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> 匯入中（地址比較多時會需要一點時間）…';
+  clearStatus(statusEl);
+
+  try {
+    const { results } = await api('/api/customers/bulk', { method: 'POST', body: JSON.stringify({ text }) });
+    const okCount = results.filter((r) => r.ok && r.geocoded).length;
+    const failGeo = results.filter((r) => r.ok && !r.geocoded).length;
+    const failLine = results.filter((r) => !r.ok);
+    let msg = `匯入完成：成功定位 ${okCount} 筆`;
+    if (failGeo > 0) msg += `，${failGeo} 筆地址定位失敗（已加入名單，可之後重新定位）`;
+    if (failLine.length > 0) msg += `，${failLine.length} 行格式有誤被略過`;
+    showStatus(statusEl, failLine.length > 0 || failGeo > 0 ? 'info' : 'success', msg);
+    document.getElementById('bulk-text').value = '';
+    await loadCustomers();
+  } catch (e) {
+    showStatus(statusEl, 'error', '匯入失敗：' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '開始匯入';
+  }
+});
+
+// ---------- 今天路線 ----------
+let lastMatched = [];
+
+document.getElementById('btn-calc-route').addEventListener('click', async () => {
+  const stops = document
+    .getElementById('route-stops')
+    .value.split('\n')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const radiusKm = parseFloat(document.getElementById('route-radius').value) || 3;
+  const statusEl = document.getElementById('route-status');
+
+  if (stops.length === 0) {
+    showStatus(statusEl, 'error', '請至少輸入一個地點');
+    return;
+  }
+
+  const btn = document.getElementById('btn-calc-route');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> 計算中…';
+  clearStatus(statusEl);
+  document.getElementById('match-card').style.display = 'none';
+  document.getElementById('message-card').style.display = 'none';
+
+  try {
+    const result = await api('/api/route/match', { method: 'POST', body: JSON.stringify({ stops, radiusKm }) });
+    lastMatched = result.matched;
+
+    let msg = `已計算路線（${result.routePoints.length} 個地點）`;
+    if (result.geocodeErrors.length > 0) {
+      msg += `<br>⚠️ 以下地址查不到座標，請確認：${result.geocodeErrors.join('、')}`;
+    }
+    if (result.noCoordCount > 0) {
+      msg += `<br>提醒：名單中有 ${result.noCoordCount} 位客戶還沒有座標，不會被列入計算，請到「客戶管理」補上。`;
+    }
+    showStatus(statusEl, result.geocodeErrors.length > 0 ? 'info' : 'success', msg);
+
+    renderMatchList(result.matched);
+    document.getElementById('match-card').style.display = '';
+    document.getElementById('message-card').style.display = result.matched.length > 0 ? '' : 'none';
+  } catch (e) {
+    showStatus(statusEl, 'error', '計算失敗：' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '計算附近客戶';
+  }
+});
+
+function renderMatchList(matched) {
+  document.getElementById('match-count').textContent = matched.length;
+  const wrap = document.getElementById('match-list');
+
+  if (matched.length === 0) {
+    wrap.innerHTML = '<div class="empty-state">這條路線附近沒有符合範圍的客戶</div>';
+    return;
+  }
+
+  wrap.innerHTML = matched
+    .map(
+      (c) => `
+    <div class="match-row">
+      <input type="checkbox" class="match-checkbox" data-id="${c.id}" ${c.lineUserId ? 'checked' : ''} ${
+        !c.lineUserId ? 'disabled' : ''
+      } />
+      <div class="match-distance">${c.distanceKm} km</div>
+      <div class="customer-main">
+        <div class="customer-name">${escapeHtml(c.name || '（未填姓名）')} ${customerStatusBadge(c)}</div>
+        <div class="customer-meta">${escapeHtml(c.phone || '無電話')} · ${escapeHtml(c.address || '')}</div>
+      </div>
+    </div>
+  `
+    )
+    .join('');
+}
+
+document.getElementById('btn-send').addEventListener('click', async () => {
+  const checked = Array.from(document.querySelectorAll('.match-checkbox:checked')).map((cb) => cb.dataset.id);
+  const message = document.getElementById('message-text').value.trim();
+  const statusEl = document.getElementById('send-status');
+
+  if (checked.length === 0) {
+    showStatus(statusEl, 'error', '沒有勾選任何已綁定的客戶');
+    return;
+  }
+  if (!message) {
+    showStatus(statusEl, 'error', '請輸入通知訊息內容');
+    return;
+  }
+
+  const btn = document.getElementById('btn-send');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> 發送中…';
+  clearStatus(statusEl);
+
+  try {
+    const result = await api('/api/send', { method: 'POST', body: JSON.stringify({ customerIds: checked, message }) });
+    let msg = `✅ 已成功發送給 ${result.sentCount} 位客戶`;
+    if (result.skipped && result.skipped.length > 0) {
+      msg += `<br>以下客戶尚未綁定 LINE，未收到通知，建議改用電話聯絡：${result.skipped
+        .map((s) => s.name || s.phone)
+        .join('、')}`;
+    }
+    showStatus(statusEl, 'success', msg);
+  } catch (e) {
+    showStatus(statusEl, 'error', '發送失敗：' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '📨 一鍵發送通知';
+  }
+});
+
+// ---------- 設定與備份 ----------
+document.getElementById('btn-broadcast-invite').addEventListener('click', async () => {
+  const message = document.getElementById('invite-text').value.trim();
+  const statusEl = document.getElementById('invite-status');
+  if (!confirm('確定要廣播給「所有」目前的 LINE 好友嗎？這個動作無法復原。')) return;
+
+  const btn = document.getElementById('btn-broadcast-invite');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> 廣播中…';
+  clearStatus(statusEl);
+
+  try {
+    await api('/api/broadcast-bind-invite', { method: 'POST', body: JSON.stringify({ message }) });
+    showStatus(statusEl, 'success', '已廣播邀請訊息，請等候客戶回覆手機末3碼完成綁定。');
+  } catch (e) {
+    showStatus(statusEl, 'error', '廣播失敗：' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '廣播邀請綁定訊息';
+  }
+});
+
+document.getElementById('btn-export').addEventListener('click', () => {
+  window.location.href = '/api/export';
+});
+
+document.getElementById('import-file').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  const statusEl = document.getElementById('backup-status');
+  if (!file) return;
+  if (!confirm('匯入備份會「覆蓋」目前的客戶資料，確定要繼續嗎？')) {
+    e.target.value = '';
+    return;
+  }
+  try {
+    const text = await file.text();
+    const data = JSON.parse(text);
+    const result = await api('/api/import', { method: 'POST', body: JSON.stringify({ customers: data }) });
+    showStatus(statusEl, 'success', `已還原 ${result.count} 筆客戶資料`);
+    await loadCustomers();
+  } catch (err) {
+    showStatus(statusEl, 'error', '匯入失敗：' + err.message);
+  } finally {
+    e.target.value = '';
+  }
+});
+
+// ---------- 初始化 ----------
+loadCustomers().catch((e) => {
+  document.getElementById('customer-list').innerHTML = `<div class="status-box status-error">載入客戶名單失敗：${e.message}</div>`;
+});
