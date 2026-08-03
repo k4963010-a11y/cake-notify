@@ -1,0 +1,14 @@
+# 相依套件（部署時會自動 npm install，不需上傳）
+node_modules/
+
+# 環境變數，內含密碼與 LINE 金鑰，絕對不要上傳到 GitHub
+.env
+.env.local
+
+# 客戶資料（含個資），只存在伺服器上，請用後台的「匯出備份」功能備份
+data/
+
+# 系統與編輯器暫存檔
+.DS_Store
+*.log
+npm-debug.log*
