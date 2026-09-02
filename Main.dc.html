@@ -10,63 +10,34 @@
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;500;600;700&display=swap');
     body { margin: 0; }
-    a { color: #8a6d3b; } a:hover { color: #6f5529; }
+    a { color: #d9b98a; } a:hover { color: #c7a877; }
   </style>
 </helmet>
 
-<div style="position: relative; width: 1080px; height: 566px; overflow: hidden; background: #c3ccdd; font-family: 'Noto Serif TC', 'Songti TC', 'STSong', 'PMingLiU', 'Microsoft JhengHei', serif;">
+<div style="position: relative; width: 1080px; height: 566px; overflow: hidden; background: #26313f; font-family: 'Noto Serif TC', 'Songti TC', 'STSong', 'PMingLiU', 'Microsoft JhengHei', serif;">
 
-  <!-- Sky -->
-  <div style="position: absolute; inset: 0; background: linear-gradient(180deg, #aeb9d4 0%, #c6cadd 26%, #e2d6cf 52%, #f4dcc2 74%, #fbe6cc 100%);"></div>
+  <!-- Real photo: misty sunrise loch (Unsplash / Jack Anstey) -->
+  <img src="loch-sunrise.jpg" alt="晨曦湖景"
+       style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block;">
 
-  <!-- Soft high haze -->
-  <div style="position: absolute; inset: 0; background: radial-gradient(120% 70% at 50% 4%, rgba(255,255,255,0.28), rgba(255,255,255,0) 60%);"></div>
+  <!-- Soft scrim: darken top (text zone) and a touch of the base, keep the lake clear -->
+  <div style="position: absolute; inset: 0; background: linear-gradient(180deg, rgba(16,24,36,0.52) 0%, rgba(16,24,36,0.34) 24%, rgba(16,24,36,0.08) 44%, rgba(16,24,36,0) 60%, rgba(16,24,36,0.05) 80%, rgba(16,24,36,0.30) 100%);"></div>
 
-  <!-- Sun glow -->
-  <div style="position: absolute; left: 66%; top: 46%; width: 520px; height: 520px; transform: translate(-50%, -50%); border-radius: 50%; background: radial-gradient(circle, rgba(255,244,225,0.95) 0%, rgba(255,231,196,0.7) 22%, rgba(255,224,183,0.32) 40%, rgba(255,224,183,0) 66%);"></div>
-  <!-- Sun disc -->
-  <div style="position: absolute; left: 66%; top: 46%; width: 118px; height: 118px; transform: translate(-50%, -50%); border-radius: 50%; background: radial-gradient(circle, #fff6e6 0%, #ffe9c4 55%, #fbdca6 100%); box-shadow: 0 0 60px 20px rgba(255,232,197,0.55);"></div>
-
-  <!-- Mountains -->
-  <svg viewBox="0 0 1080 566" width="1080" height="566" preserveAspectRatio="none" style="position: absolute; inset: 0;">
-    <!-- Farthest ridge -->
-    <path d="M0 372 L120 336 L250 372 L400 320 L560 366 L720 322 L880 364 L1000 330 L1080 356 L1080 566 L0 566 Z"
-          fill="#9aa8c4" opacity="0.55"></path>
-    <!-- Middle ridge -->
-    <path d="M0 420 L160 372 L300 418 L470 356 L640 416 L800 366 L960 420 L1080 388 L1080 566 L0 566 Z"
-          fill="#7c8bad" opacity="0.72"></path>
-    <!-- Haze band -->
-    <rect x="0" y="404" width="1080" height="70" fill="url(#haze)"></rect>
-    <!-- Front ridge -->
-    <path d="M0 486 L170 430 L360 490 L520 438 L700 496 L860 446 L1010 494 L1080 470 L1080 566 L0 566 Z"
-          fill="#586887"></path>
-    <defs>
-      <linearGradient id="haze" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0" stop-color="rgba(238,232,228,0)"></stop>
-        <stop offset="0.5" stop-color="rgba(240,233,227,0.55)"></stop>
-        <stop offset="1" stop-color="rgba(240,233,227,0)"></stop>
-      </linearGradient>
-    </defs>
-  </svg>
-
-  <!-- Gentle bottom vignette for grounding -->
-  <div style="position: absolute; inset: 0; background: linear-gradient(180deg, rgba(40,48,68,0) 68%, rgba(40,48,68,0.16) 100%);"></div>
-
-  <!-- Quote -->
-  <div style="position: absolute; top: 82px; left: 0; right: 0; display: flex; flex-direction: column; align-items: center; gap: 18px; padding: 0 90px; box-sizing: border-box;">
-    <div style="display: flex; flex-direction: column; align-items: center; gap: 14px; color: #363b4c; text-align: center; text-shadow: 0 1px 14px rgba(255,250,242,0.55);">
-      <div style="font-size: 43px; font-weight: 600; letter-spacing: 3px; line-height: 1.4;">想要的東西要努力爭取</div>
-      <div style="font-size: 43px; font-weight: 600; letter-spacing: 3px; line-height: 1.4;">拼盡全力享受過程</div>
-      <div style="font-size: 43px; font-weight: 600; letter-spacing: 3px; line-height: 1.4;">在疲憊與成就感中前進</div>
+  <!-- Quote (upper sky) -->
+  <div style="position: absolute; top: 58px; left: 0; right: 0; display: flex; flex-direction: column; align-items: center; gap: 20px; padding: 0 80px; box-sizing: border-box;">
+    <div style="display: flex; flex-direction: column; align-items: center; gap: 15px; text-align: center; color: #fbfaf6; text-shadow: 0 2px 18px rgba(6,12,22,0.55), 0 1px 3px rgba(6,12,22,0.4);">
+      <div style="font-size: 43px; font-weight: 600; letter-spacing: 4px; line-height: 1.4;">想要的東西要努力爭取</div>
+      <div style="font-size: 43px; font-weight: 600; letter-spacing: 4px; line-height: 1.4;">拼盡全力享受過程</div>
+      <div style="font-size: 43px; font-weight: 600; letter-spacing: 4px; line-height: 1.4;">在疲憊與成就感中前進</div>
     </div>
-    <!-- Small divider -->
-    <div style="display: flex; align-items: center; gap: 14px; margin-top: 8px;">
-      <div style="width: 46px; height: 1px; background: rgba(80,72,60,0.5);"></div>
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(120,96,58,0.85)" stroke-width="1.4" stroke-linecap="round">
+    <!-- Small sun divider -->
+    <div style="display: flex; align-items: center; gap: 15px;">
+      <div style="width: 52px; height: 1px; background: rgba(255,244,228,0.75);"></div>
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(255,240,220,0.95)" stroke-width="1.4" stroke-linecap="round">
         <circle cx="12" cy="12" r="4.2"></circle>
         <path d="M12 2.5v2.4M12 19.1v2.4M2.5 12h2.4M19.1 12h2.4M5.2 5.2l1.7 1.7M17.1 17.1l1.7 1.7M18.8 5.2l-1.7 1.7M6.9 17.1l-1.7 1.7"></path>
       </svg>
-      <div style="width: 46px; height: 1px; background: rgba(80,72,60,0.5);"></div>
+      <div style="width: 52px; height: 1px; background: rgba(255,244,228,0.75);"></div>
     </div>
   </div>
 
